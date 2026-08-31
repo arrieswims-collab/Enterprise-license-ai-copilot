@@ -161,8 +161,8 @@ def get_initial_datasets():
 if "datasets" not in st.session_state:
     st.session_state["datasets"] = get_initial_datasets()
 
-if "selected_contract" not in st.session_state:
-    st.session_state["selected_contract"] = "GitHub Enterprise + Copilot"
+if "active_contract" not in st.session_state:
+    st.session_state["active_contract"] = "GitHub Enterprise + Copilot"
 
 
 # ==============================================================================
@@ -213,51 +213,90 @@ def parse_uploaded_contract(file_name, file_bytes):
     except Exception:
         text = str(file_bytes)
 
-    vendor = "Custom Vendor Inc."
-    product = file_name.replace(".pdf", "").replace(".docx", "").replace(".txt", "").replace("_", " ")
-    purchased_seats = 500
-    unit_cost = 350.0
-    notice_days = 60
-    auto_renewal = True
-    penalty_rate = 15.0
-
+    clean_name = re.sub(r'[\-_0-9]+', ' ', file_name.replace('.pdf', '').replace('.docx', '').replace('.txt', '')).strip()
     lowered = (file_name + " " + text).lower()
-    if "adobe" in lowered or "creative" in lowered:
+
+    if "five9" in lowered:
+        vendor = "Five9 Inc."
+        product = "Intelligent Cloud Contact Center (Virtual CC)"
+        purchased_seats = 550
+        unit_cost = 1800.00  # $150/agent/month
+        notice_days = 60
+        auto_renewal = True
+        penalty_rate = 20.0
+        citations = [
+            {"field": "Concurrent Agent Metric", "page": 3, "clause": "Sec 2.1: Virtual Contact Center (VCC) licenses measured by peak concurrent logged-in agents per calendar month."},
+            {"field": "Auto-Renewal Commitment", "page": 7, "clause": "Sec 9.4: Subscriptions automatically renew for recurring 12-month periods unless written notice is received 60 days prior to term end."},
+            {"field": "Burst / Overage Penalty", "page": 11, "clause": "Sec 13.1: Concurrent usage exceeding committed baselines billed on-demand at standard list rate plus 20% overage penalty."}
+        ]
+    elif "tableau" in lowered:
+        vendor = "Tableau (Salesforce)"
+        product = "Tableau Creator & Server Embedded"
+        purchased_seats = 400
+        unit_cost = 840.00
+        notice_days = 60
+        auto_renewal = True
+        penalty_rate = 15.0
+        citations = [
+            {"field": "User Metric Rights", "page": 3, "clause": "Sec 2.4: Creator and Explorer licenses are non-concurrent named user assignments."},
+            {"field": "Opt-Out Term", "page": 8, "clause": "Sec 10.1: Cancellation or reduction of subscription tiers requires 60 days prior written notice."},
+            {"field": "Audit True-Up", "page": 11, "clause": "Sec 13.2: Unregistered server access subject to standard list price retro-active true-up + 15% surcharge."}
+        ]
+    elif "adobe" in lowered or "creative" in lowered:
         vendor = "Adobe Systems"
         product = "Adobe Creative Cloud All Apps"
         purchased_seats = 350
         unit_cost = 959.88
         notice_days = 30
+        auto_renewal = True
         penalty_rate = 10.0
+        citations = [
+            {"field": "Entitlement Pool", "page": 2, "clause": "Sec 1.2: Enterprise VIP subscription entitles 350 VIP Named Users for all CC Desktop apps."},
+            {"field": "Renewal Window", "page": 6, "clause": "Sec 7.3: Subscription renews automatically for 12 months unless cancelled 30 days prior."},
+            {"field": "Compliance Term", "page": 10, "clause": "Sec 12.1: Usage audit true-up billed at current list price with a 10% compliance fee."}
+        ]
     elif "snowflake" in lowered:
         vendor = "Snowflake Inc."
-        product = "Enterprise Cloud Data Platform (Capacity)"
+        product = "Enterprise Cloud Data Platform"
         purchased_seats = 800
         unit_cost = 720.00
         notice_days = 60
+        auto_renewal = True
         penalty_rate = 20.0
+        citations = [
+            {"field": "Capacity Commitment", "page": 1, "clause": "Sec 3.1: Pre-purchased annual capacity compute credits with annual minimum commitment."},
+            {"field": "Renewal Deadline", "page": 5, "clause": "Sec 9.2: Contract rollover notice required 60 days prior to contract expiration."}
+        ]
     elif "oracle" in lowered:
         vendor = "Oracle Corporation"
-        product = "Database Enterprise Edition (Processor)"
+        product = "Database Enterprise Edition"
         purchased_seats = 120
         unit_cost = 4750.00
         notice_days = 90
+        auto_renewal = True
         penalty_rate = 30.0
-    elif "zoom" in lowered:
-        vendor = "Zoom Video Communications"
-        product = "Zoom Workplace Enterprise"
-        purchased_seats = 1500
-        unit_cost = 250.00
-        notice_days = 45
-        penalty_rate = 0.0
+        citations = [
+            {"field": "Processor Factor", "page": 4, "clause": "Schedule P: Core Factor calculation multiplier applies to physical socket virtualization."},
+            {"field": "Audit Terms", "page": 14, "clause": "Sec 15.3: 45-day notice audit clause with retroactive licensing at list price + 30% penalty."}
+        ]
     else:
-        vendor = re.sub(r'[^a-zA-Z0-9 ]', '', product).title()
+        vendor = clean_name.title() if clean_name else "Custom Enterprise Vendor"
         product = f"{vendor} Enterprise Suite"
+        purchased_seats = 500
+        unit_cost = 420.00
+        notice_days = 60
+        auto_renewal = True
+        penalty_rate = 15.0
+        citations = [
+            {"field": "Authorized Seats", "page": 1, "clause": f"Section 1.1: Customer is granted non-exclusive license for {purchased_seats} named users."},
+            {"field": "Notice Period", "page": 4, "clause": f"Section 6.2: Written notice must be delivered {notice_days} days prior to contract anniversary."},
+            {"field": "Compliance Clause", "page": 8, "clause": f"Section 11.3: Overage usage subject to retroactive true-up at list price plus {penalty_rate}% surcharge."}
+        ]
 
-    assigned = int(purchased_seats * np.random.uniform(0.85, 1.12))
-    active_30d = int(assigned * 0.70)
+    assigned = int(purchased_seats * np.random.uniform(0.88, 1.14))
+    active_30d = int(assigned * 0.72)
     dormant_31_60 = int(assigned * 0.12)
-    dormant_61_90 = int(assigned * 0.10)
+    dormant_61_90 = int(assigned * 0.09)
     shelfware_90 = assigned - (active_30d + dormant_31_60 + dormant_61_90)
     if shelfware_90 < 0:
         shelfware_90 = 0
@@ -275,12 +314,8 @@ def parse_uploaded_contract(file_name, file_bytes):
         "notice_window_days": notice_days,
         "auto_renewal": auto_renewal,
         "audit_penalty_rate_pct": penalty_rate,
-        "confidence_score": 0.95,
-        "source_citations": [
-            {"field": "Licensing Entitlement", "page": 1, "clause": f"Section 1.1: Customer is granted non-exclusive rights for {purchased_seats} authorized named users."},
-            {"field": "Renewal & Cancellation", "page": 5, "clause": f"Section 8.2: Agreement automatically renews for successive 12-month terms unless written cancellation is provided at least {notice_days} days prior to renewal."},
-            {"field": "Compliance & Audit", "page": 9, "clause": f"Section 12.4: Publisher reserves the right to conduct an annual software compliance audit with a {penalty_rate}% penalty on unauthorized surplus usage."}
-        ],
+        "confidence_score": 0.97,
+        "source_citations": citations,
         "assigned_seats": assigned,
         "active_30d": active_30d,
         "dormant_31_60d": dormant_31_60,
@@ -299,72 +334,71 @@ with st.sidebar:
     st.caption("Agentic ITAM & FinOps Intelligence")
     st.markdown("---")
 
-    all_keys = list(st.session_state["datasets"].keys())
-    current_index = all_keys.index(st.session_state["selected_contract"]) if st.session_state["selected_contract"] in all_keys else 0
-
-    selected_contract_key = st.selectbox(
-        "📁 Active Enterprise Contract",
-        all_keys,
-        index=current_index
-    )
-    st.session_state["selected_contract"] = selected_contract_key
-    contract_data = st.session_state["datasets"][selected_contract_key]
-
-    st.markdown("---")
-    st.subheader("📥 Ingest New Vendor Agreement")
-
+    # Ingestion Block
+    st.subheader("📥 Ingest Vendor Agreement")
     uploaded_file = st.file_uploader(
-        "Upload Vendor MSA (PDF, DOCX, TXT)",
+        "Upload MSA (PDF, DOCX, TXT)",
         type=["pdf", "docx", "txt"],
-        help="Upload an enterprise contract to trigger the Multi-Agent extraction pipeline."
+        key="file_uploader_widget"
     )
 
     if uploaded_file is not None:
         if st.button("🚀 Run Agentic Ingestion Pipeline", type="primary", use_container_width=True):
-            with st.status("Running Multi-Agent Contract Extraction...", expanded=True) as status:
+            with st.status(f"Ingesting {uploaded_file.name}...", expanded=True) as status:
                 st.write("📄 **Step 1/3:** Chunking document & generating vector embeddings...")
-                time.sleep(0.6)
+                time.sleep(0.4)
                 st.write("🤖 **Step 2/3:** Parser Agent (`GPT-4o-mini`) extracting Pydantic schema & citations...")
-                time.sleep(0.7)
-                st.write("⚖️ **Step 3/3:** Deterministic Engine cross-referencing telemetry logs & calculating ELP...")
                 time.sleep(0.5)
+                st.write("⚖️ **Step 3/3:** Deterministic Engine cross-referencing telemetry logs & calculating ELP...")
+                time.sleep(0.3)
 
                 parsed_data = parse_uploaded_contract(uploaded_file.name, uploaded_file.getvalue())
                 new_key = f"{parsed_data['vendor']} - {parsed_data['product']}"
 
                 st.session_state["datasets"][new_key] = parsed_data
-                st.session_state["selected_contract"] = new_key
-                status.update(label=f"✓ Successfully Ingested: {parsed_data['vendor']}!", state="complete", expanded=False)
+                st.session_state["active_contract"] = new_key
+                status.update(label=f"✓ Analyzed: {parsed_data['vendor']}!", state="complete", expanded=False)
 
-            st.success(f"Loaded **{new_key}** into active workspace!")
             st.rerun()
+
+    st.markdown("---")
+    # Contract Selector
+    all_keys = list(st.session_state["datasets"].keys())
+    if st.session_state["active_contract"] not in all_keys:
+        st.session_state["active_contract"] = all_keys[0]
+
+    selected_contract = st.selectbox(
+        "📁 Active Enterprise Contract",
+        all_keys,
+        index=all_keys.index(st.session_state["active_contract"])
+    )
+    st.session_state["active_contract"] = selected_contract
+    contract_data = st.session_state["datasets"][selected_contract]
 
     st.markdown("---")
     st.markdown("##### ⚡ Quick Load Presets")
-    col_pre1, col_pre2 = st.columns(2)
-    with col_pre1:
+    col_p1, col_p2, col_p3 = st.columns(3)
+    with col_p1:
+        if st.button("Five9", use_container_width=True):
+            d = parse_uploaded_contract("Five9_MSA_Signed.pdf", b"Five9")
+            k = "Five9 Inc. - Intelligent Cloud Contact Center (Virtual CC)"
+            st.session_state["datasets"][k] = d
+            st.session_state["active_contract"] = k
+            st.rerun()
+    with col_p2:
+        if st.button("Tableau", use_container_width=True):
+            d = parse_uploaded_contract("Tableau_Creator.pdf", b"Tableau")
+            k = "Tableau (Salesforce) - Tableau Creator & Server Embedded"
+            st.session_state["datasets"][k] = d
+            st.session_state["active_contract"] = k
+            st.rerun()
+    with col_p3:
         if st.button("Adobe CC", use_container_width=True):
-            data = parse_uploaded_contract("Adobe_Creative_Cloud_MSA.pdf", b"Adobe")
-            st.session_state["datasets"]["Adobe Systems - Creative Cloud"] = data
-            st.session_state["selected_contract"] = "Adobe Systems - Creative Cloud"
+            d = parse_uploaded_contract("Adobe_CC.pdf", b"Adobe")
+            k = "Adobe Systems - Adobe Creative Cloud All Apps"
+            st.session_state["datasets"][k] = d
+            st.session_state["active_contract"] = k
             st.rerun()
-    with col_pre2:
-        if st.button("Snowflake", use_container_width=True):
-            data = parse_uploaded_contract("Snowflake_Capacity_Agreement.pdf", b"Snowflake")
-            st.session_state["datasets"]["Snowflake Inc. - Data Cloud"] = data
-            st.session_state["selected_contract"] = "Snowflake Inc. - Data Cloud"
-            st.rerun()
-
-    st.markdown("---")
-    st.subheader("⚙️ System Telemetry & Model Ops")
-    st.markdown("""
-    * **Parser Agent:** `GPT-4o-mini`
-    * **Math Engine:** `Deterministic Python 3.11`
-    * **Strategy Agent:** `Claude 3.5 Sonnet`
-    * **RAG Vector DB:** `ChromaDB (Cosine)`
-    * **Inference Latency:** `1.42s avg`
-    * **Run Cost:** `~$0.06 / run`
-    """)
 
 
 # ==============================================================================
@@ -566,7 +600,7 @@ with tab_strategy:
             #### Objective: Mitigate ${metrics['audit_risk_usd']:,.0f} True-Up Exposure via Early Tier Restructuring
 
             1. **Pre-emptive Right-Sizing:** Before the official audit cutoff, de-provision the **{contract_data['shelfware_90d_plus']:,} accounts** that have been inactive for >90 days. This immediately pulls total active deployments from {contract_data['assigned_seats']:,} down to {contract_data['assigned_seats'] - contract_data['shelfware_90d_plus']:,}, resolving the compliance violation without purchasing additional net-new licenses.
-            2. **Commercial Leverage Position:** Offer the vendor an early 24-month contract renewal in exchange for full waiver of the {contract_data['audit_penalty_rate_pct']}% penalty surcharge clause (Sec 14.1).
+            2. **Commercial Leverage Position:** Offer the vendor an early 24-month contract renewal in exchange for full waiver of the {contract_data['audit_penalty_rate_pct']}% penalty surcharge clause.
             3. **Recommended Entitlement Target:** Reset committed seats to **{int(contract_data['active_30d'] * 1.1):,} seats** (includes a 10% operational buffer), saving **${(contract_data['purchased_seats'] - int(contract_data['active_30d'] * 1.1)) * contract_data['unit_cost_usd']:,.0f}/year**.
             """)
         else:
